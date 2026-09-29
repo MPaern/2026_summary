@@ -11,7 +11,7 @@ library(suncalc)
 library(lubridate)
 library(readr)
 #library(esquisse)
-#library(MetBrewer)
+library(MetBrewer)
 #library(purrr)
 #library(sp)
 #library(sf)
@@ -24,9 +24,9 @@ library(readr)
 
 deployment <-  read_csv("data/survey_deployment.csv")
 maintenance <-  read_csv("data/survey_maintenance.csv")
-overview_data <-  read_csv("data/overview_table_25.csv")
-coordinates <- read_csv("data/GPS_2025.csv")
-water <- read_csv("data/distance_from_water_2025.csv")
+overview_data <-  read_csv("data/overview_table_26.csv")
+coordinates <- read_csv("data/GPS_2026.csv")
+water <- read_csv("data/distance_from_water_2026.csv")
 
 
 # make directories of all the sites and add the merged id files so when there is a problem with one of the sites, it can be fixed on it's own -----------
@@ -157,21 +157,25 @@ write.csv(cm_2026, "cm_2026_total.csv")
 
 
 # one file for 2026 -------------------------------
-cm <- read.csv("cm_2025_total.csv")
+cm <- read.csv("cm_2026_total.csv")
 
 # check data
 
 str(cm) 
 summary(cm) 
-summary(cm) 
 colSums(is.na(cm))
-
-na_rows <- cm %>% filter(is.na(DATE))
 
 #choose variables for dataset
 cm <- cm %>% 
   rename(
-    filename = "OUT_FILE_FS") %>% 
+    filename = "OUT.FILE.FS",
+    autoid = "AUTO.ID.",
+    IN_FILE = "IN.FILE",
+    DATE_12 = "DATE.12",
+    TIME_12 = "TIME.12",
+    HOUR_12 = "HOUR.12",
+    MATCH_RATIO = "MATCH.RATIO",
+    ALTERNATE_1 = "ALTERNATE.1") %>% 
   mutate(autoid = factor(autoid)) %>% 
   dplyr::select(OUTDIR, FOLDER, IN_FILE, filename, DURATION, 
                 DATE, TIME, HOUR,
@@ -179,70 +183,18 @@ cm <- cm %>%
                 autoid, PULSES, MATCH_RATIO, ALTERNATE_1, Site
   )
 
-# rows that don't have a file name, but have autoid
-na_rows <- cm %>% filter(is.na(filename)) 
-# delete Noise rows and those that last too little
-na_rows <- na_rows[na_rows$autoid != "Noise", ]
-na_rows <- na_rows[na_rows$DURATION > 1, ]
-# why is there 57 rows of data without filenames?
 
-# 4 locations have the DATE columns in wrong format (CM-07, CM-08, CM-26, CM-45)
-
-# new date column
-cm$DATE_clean <- as.Date(NA)
-
-# 2 formats
-idx_iso <- grepl("^\\d{4}-\\d{2}-\\d{2}$", cm$DATE)
-idx_short <- grepl("^\\d{1,2}-\\d{1,2}-\\d{2}$", cm$DATE)
-
-cm$DATE_clean[idx_iso] <- ymd(cm$DATE[idx_iso])
-cm$DATE_clean[idx_short] <- dmy(cm$DATE[idx_short])
-
-# Fix year (all short ones should be 2025)
-cm$DATE_clean[idx_short] <- update(cm$DATE_clean[idx_short], year = 2025)
-
-# Final format
-cm$DATE_clean <- format(cm$DATE_clean, "%Y-%m-%d")
-
-# Same for DATE_12 column
-
-# new column
-cm$DATE_12_clean <- as.Date(NA)
-
-# 2 formats
-idx_iso <- grepl("^\\d{4}-\\d{2}-\\d{2}$", cm$DATE_12)
-idx_short <- grepl("^\\d{1,2}-\\d{1,2}-\\d{2}$", cm$DATE_12)
-
-# Parse
-cm$DATE_12_clean[idx_iso] <- ymd(cm$DATE_12[idx_iso])
-cm$DATE_12_clean[idx_short] <- dmy(cm$DATE_12[idx_short])
-
-# Fix year (all short ones should be 2025)
-cm$DATE_12_clean[idx_short] <- update(cm$DATE_12_clean[idx_short], year = 2025)
-
-# Final format
-cm$DATE_12_clean <- format(cm$DATE_12_clean, "%Y-%m-%d")
-
-# make dates
-cm$DATE_clean <- as.Date(cm$DATE_clean)
-cm$DATE_12_clean <- as.Date(cm$DATE_12_clean)
-
-# remove other date columns and replace them with new ones
+# make dates dates
 
 cm <- cm %>%
-  select(-DATE) %>% 
-  relocate(DATE_clean, .after = DURATION) %>%
-  rename (DATE = DATE_clean) %>% 
-  select(-DATE_12) %>% 
-  relocate(DATE_12_clean, .after = HOUR) %>%
-  rename (DATE_12 = DATE_12_clean)
+  mutate(
+    DATE = as.Date(DATE, format = "%Y-%m-%d"),
+    DATE_12 = as.Date(DATE_12, format = "%Y-%m-%d")
+  )
 
+summary(cm$autoid)
 
-# find PIPPIP and change them to PIPPYG
-
-cm$autoid[cm$autoid == "PIPPIP"] <- "PIPPYG"
-
-# Overview table for 2025--------------------------
+# Overview table for 2026--------------------------
 
 # new table called overview_summary
 
@@ -259,6 +211,37 @@ overview_summary <- cm %>%
     earliest_active = min(DATE),
     last_active = max(DATE),
   )
+
+
+#### MADE IT TO HERE, RETRIEVAL HAS 3 missing values------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # add info from other tables
 # Make date more readable
@@ -327,73 +310,13 @@ overview_summary <- overview_summary %>%
   )
 
 
-# one working file for 2025--------------
+# one working file for 2026--------------
 
 
-# found 2 gaps (CM-35, CM-44) that are not explained, ran Kaleidoscope for those timeframes again to get an id.csv file
-
-df35 <- read.csv("P:/SW_CoastalMonitoring/Data_collection_2025/CM-35/WAV/KPRO_V1/New_25.09.2025/id.csv")
-df44 <- read.csv("P:/SW_CoastalMonitoring/Data_collection_2025/CM-44/WAV/KPRO_V1/New_30.09.2025/id.csv")
-
-df35$Site <- "CM-35"
-df44$Site <- "CM-44"
-
-df35$filename <- df35$IN.FILE
-df44$filename <- df44$IN.FILE
-
-df35 <- df35 %>% 
-  rename(
-    IN_FILE = "IN.FILE",
-    DATE_12 = "DATE.12",
-    TIME_12 = "TIME.12",
-    HOUR_12 = "HOUR.12",
-    autoid = "AUTO.ID.",
-    MATCH_RATIO = "MATCH.RATIO",
-    ALTERNATE_1 = "ALTERNATE.1") %>% 
-  mutate(autoid = factor(autoid),
-         DATE_12 = as.Date(DATE_12, format = "%d/%m/%Y"),
-         DATE = as.Date(DATE, format = "%d/%m/%Y")) %>% 
-  dplyr::select(OUTDIR, FOLDER, IN_FILE, filename, DURATION, 
-                DATE, TIME, HOUR,
-                DATE_12, TIME_12, HOUR_12,
-                autoid, PULSES, MATCH_RATIO, ALTERNATE_1, Site
-  )
-
-df44 <- df44 %>% 
-  rename(
-    IN_FILE = "IN.FILE",
-    DATE_12 = "DATE.12",
-    TIME_12 = "TIME.12",
-    HOUR_12 = "HOUR.12",
-    autoid = "AUTO.ID.",
-    MATCH_RATIO = "MATCH.RATIO",
-    ALTERNATE_1 = "ALTERNATE.1") %>% 
-  mutate(autoid = factor(autoid),
-         DATE_12 = as.Date(DATE_12, format = "%d/%m/%Y"),
-         DATE = as.Date(DATE, format = "%d/%m/%Y")) %>% 
-  dplyr::select(OUTDIR, FOLDER, IN_FILE, filename, DURATION, 
-                DATE, TIME, HOUR,
-                DATE_12, TIME_12, HOUR_12,
-                autoid, PULSES, MATCH_RATIO, ALTERNATE_1, Site
-  )
-
-# find what files are not in cm and add those there
-
-new_from_35 <- df35 %>%
-  anti_join(cm, by = "filename")
-
-new_from_44 <- df44 %>%
-  anti_join(cm, by = "filename")
-
-cm <- cm %>%
-  bind_rows(new_from_35, new_from_44)
-
-
-# full file
-
-write.csv(cm, "cm_2025.csv")
-
-cm <- read.csv("cm_2025.csv")
+# 
+# write.csv(cm, "cm_2025.csv")
+# 
+# cm <- read.csv("cm_2025.csv")
 
 # Where is the most noise, visualisation  -------------------------------------------------------------------
 
@@ -426,7 +349,7 @@ ggplot(cm) +
   scale_fill_viridis_c() +  # Better color scale for density
   xlab("Month") + ylab("Site") +
   scale_x_date(date_breaks = "1 month", , date_labels = "%b") +
-  ggtitle("Recording period 2025") + 
+  ggtitle("Recording period 2026") + 
   theme_minimal()
 
 
@@ -519,72 +442,6 @@ table(cmtotal$Site)
 
 str(cmtotal) 
 colSums(is.na(cmtotal))
-
-# gaps in CM-35 and CM-44
-
-df35 <- read.csv("P:/SW_CoastalMonitoring/Data_collection_2025/CM-35/WAV/KPRO_V1/New_25.09.2025/id.csv")
-df44 <- read.csv("P:/SW_CoastalMonitoring/Data_collection_2025/CM-44/WAV/KPRO_V1/New_30.09.2025/id.csv")
-
-# These SD cards have been run trough K twice, so IN FILE is the filename aka OUT FILE FS
-
-df35$Site <- "CM-35"
-df35 <- df35 %>%
-  relocate(Site, .before =  INDIR)
-df44$Site <- "CM-44"
-df44 <- df44 %>%
-  relocate(Site, .before =  INDIR)
-
-str(df35)
-str(df44)
-
-# make new df-s the same format as cmtotal
-
-# same column names
-names(df35) <- names(cmtotal)
-names(df44) <- names(cmtotal)
-
-# same column classes
-df35[] <- Map(function(x, y) as(y, class(x)), cmtotal, df35)
-df44[] <- Map(function(x, y) as(y, class(x)), cmtotal, df44)
-
-# make out file fs same as infile
-
-df35$OUT_FILE_FS <- df35$IN_FILE
-df44$OUT_FILE_FS <- df44$IN_FILE
-
-# find what files are not in cm and add those there
-
-new_from_35 <- df35 %>%
-  anti_join(cmtotal, by = "OUT_FILE_FS")
-
-new_from_44 <- df44 %>%
-  anti_join(cmtotal, by = "OUT_FILE_FS")
-
-cmtotal <- cmtotal %>%
-  bind_rows(new_from_35, new_from_44)
-
-table(cmtotal$Site)
-
-str(cmtotal) 
-colSums(is.na(cmtotal))
-
-# replace NA in OUT_FILE_FS with IN_FILE
-
-cmtotal <- cmtotal %>% 
-  mutate(OUT_FILE_FS = coalesce(OUT_FILE_FS, IN_FILE))
-
-# write new file
-
-write.csv(cmtotal, "cm_2025_total.csv")
-
-# fix filenames in cm_2025.csv----------------------------
-
-str(cm) 
-colSums(is.na(cm))
-cm <- cm %>% 
-  mutate(filename = coalesce(filename, IN_FILE))
-
-write.csv(cm, "cm_2025.csv")
 
 
 # working with cm
