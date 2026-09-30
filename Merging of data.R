@@ -7,11 +7,11 @@ library(fs)
 library(ggplot2)
 library(dplyr)
 library(suncalc)
-#library(suntools)
 library(lubridate)
 library(readr)
-#library(esquisse)
 library(MetBrewer)
+
+#library(esquisse)
 #library(purrr)
 #library(sp)
 #library(sf)
@@ -213,36 +213,6 @@ overview_summary <- cm %>%
   )
 
 
-#### MADE IT TO HERE, RETRIEVAL HAS 3 missing values------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # add info from other tables
 # Make date more readable
 deployment <- deployment %>%
@@ -308,6 +278,18 @@ overview_summary <- overview_summary %>%
              m_to_coast = "distance to coast (m)"),
     by= "Site"
   )
+
+# manually add dates of maintenance as date deployed into overwintering detectors (+ date retrieved)
+# write and read document in, working document from now on.
+
+
+
+
+
+
+
+
+
 
 
 # one working file for 2026--------------
@@ -404,12 +386,6 @@ overview_summary <- overview_summary %>%
 
 overview_summary <- overview_summary %>% 
   mutate(missing_days = ifelse(is.na(missing_days), 0, missing_days))
-
-# some types still wrong
-
-overview_summary[1,13] = "inland" 
-overview_summary[29,13] = "coast" 
-overview_summary[34,13] = "coast" 
 
 # change missing retrival dates to 22-10-2025
 
