@@ -279,26 +279,81 @@ overview_summary <- overview_summary %>%
     by= "Site"
   )
 
-# manually add dates of maintenance as date deployed into overwintering detectors (+ date retrieved)
-# write and read document in, working document from now on.
+# change tz of overview
 
+overview_summary$date_deployed <- as.POSIXct(
+  format(overview_summary$date_deployed, tz = "UTC", format = "%Y-%m-%d %H:%M:%S"),
+  tz = "Europe/Oslo",
+  format = "%Y-%m-%d %H:%M:%S"
+)
 
+overview_summary$date_retrieved <- as.POSIXct(
+  format(overview_summary$date_retrieved, tz = "UTC", format = "%Y-%m-%d %H:%M:%S"),
+  tz = "Europe/Oslo",
+  format = "%Y-%m-%d %H:%M:%S"
+)
 
+# delete two earlier retrievals that actually went up again later
 
+overview_summary <- overview_summary[
+  is.na(overview_summary$date_retrieved) |
+    overview_summary$date_retrieved >= as.POSIXct("2026-05-01 00:00:00"),
+]
 
+# manually add dates of maintenance as date deployed into overwintering detectors
 
+sites_to_update <- c("CM-06", "CM-17")
 
+overview_summary$date_deployed[overview_summary$Site %in% sites_to_update] <- as.POSIXct(
+  "2026-03-19 14:00:00",
+  format = "%Y-%m-%d %H:%M:%S",
+  tz = "Europe/Oslo"
+)
 
+overview_summary$date_deployed[overview_summary$Site %in% "CM-04"] <- as.POSIXct(
+  "2026-03-25 09:00:00",
+  format = "%Y-%m-%d %H:%M:%S",
+  tz = "Europe/Oslo"
+)
 
+sites_to_update <- c("CM-05", "CM-03", "CM-21", "CM-56")
 
+overview_summary$date_deployed[overview_summary$Site %in% sites_to_update] <- as.POSIXct(
+  "2026-03-24 12:30:00",
+  format = "%Y-%m-%d %H:%M:%S",
+  tz = "Europe/Oslo"
+)
 
-# one working file for 2026--------------
+# manually add retrieval dates
+# stolen
+overview_summary$date_retrieved[overview_summary$Site %in% "CM-04"] <- as.POSIXct(
+  "2026-04-23 12:30:00",
+  format = "%Y-%m-%d %H:%M:%S",
+  tz = "Europe/Oslo"
+)
 
+overview_summary$date_retrieved[overview_summary$Site %in% "CM-21"] <- as.POSIXct(
+  "2026-07-21 09:40:00",
+  format = "%Y-%m-%d %H:%M:%S",
+  tz = "Europe/Oslo"
+)
 
-# 
-# write.csv(cm, "cm_2025.csv")
-# 
-# cm <- read.csv("cm_2025.csv")
+sites_to_update <- c("CM-05", "CM-03", "CM-56")
+
+overview_summary$date_retrieved[overview_summary$Site %in% sites_to_update] <- as.POSIXct(
+  "2026-07-23 12:30:00",
+  format = "%Y-%m-%d %H:%M:%S",
+  tz = "Europe/Oslo"
+)
+
+sites_to_update <- c("CM-06", "CM-17")
+
+overview_summary$date_retrieved[overview_summary$Site %in% sites_to_update] <- as.POSIXct(
+  "2026-07-24 12:30:00",
+  format = "%Y-%m-%d %H:%M:%S",
+  tz = "Europe/Oslo"
+)
+
 
 # Where is the most noise, visualisation  -------------------------------------------------------------------
 
@@ -387,149 +442,18 @@ overview_summary <- overview_summary %>%
 overview_summary <- overview_summary %>% 
   mutate(missing_days = ifelse(is.na(missing_days), 0, missing_days))
 
-# change missing retrival dates to 22-10-2025
-
-overview_summary <- overview_summary %>% 
-  mutate(date_retrieved = if_else(
-    is.na(date_retrieved),
-    as.Date("2025-10-22"),
-    date_retrieved
-  ))
 
 #final product ----------------------------------------------------------------------------
 
-write.csv(overview_summary, "overview_2025.csv")
+write.csv(overview_summary, "overview_2026.csv")
 
 # going of from here --------------------
 
-overview_summary <- read.csv("overview_2025.csv")
+overview_summary <- read.csv("overview_2026.csv")
 
 # write.csv(missing_dates, "Missing_dates.csv")
 
-write.csv(missing_dates, "missing_dates_2025.csv")
+write.csv(missing_dates, "missing_dates_2026.csv")
 
 
-#found gaps in cm total-------------------
 
-cmtotal <- read.csv("cm_2025_total.csv")
-cmtotal[1]<- NULL
-
-table(cmtotal$Site)
-
-str(cmtotal) 
-colSums(is.na(cmtotal))
-
-
-# working with cm
-
-cm <- read.csv("cm_2025.csv")
-cm$DATE <- as.Date(cm$DATE)
-cm$DATE_12 <- as.Date(cm$DATE_12)
-
-# date and time as chr
-
-cm <- cm %>%
-  mutate(
-    dt_str = paste(DATE, TIME)
-  )
-
-# make column for wrong daylight saving times
-
-cm <- cm %>%
-  mutate(
-    dst_gap = DATE == "2025-03-30" &
-      TIME >= "02:00:00" &
-      TIME <  "03:00:00"
-  )
-
-
-# fix gap 
-
-cm <- cm %>%
-  mutate(
-    dt_fixed = if_else(
-      dst_gap,
-      paste(DATE, sprintf("%02d:%s",
-                          as.integer(substr(TIME, 1, 2)) + 1,
-                          substr(TIME, 4, 5))),
-      paste(DATE, TIME)
-    )
-  )
-
-# fix dst to real datetime, now all the sites with wrong start with 03:00-
-
-cm <- cm %>%
-  mutate(
-    dt_str_fixed = if_else(
-      dst_gap,
-      paste(
-        DATE,
-        sprintf(
-          "%02d:%s",
-          as.integer(substr(TIME, 1, 2)) + 1,
-          substr(TIME, 4, 8)
-        )
-      ),
-      dt_str
-    )
-  )
-
-# make datetimes column for all the dates 
-
-cm <- cm %>%
-  mutate(
-    datetime_tz = ymd_hms(dt_str_fixed, tz = "Europe/Oslo")
-  )
-
-# add an hour to all days detectors were out after dst before maintenance
-
-group1 <- c("CM-06", "CM-17", "CM-20", "CM-18", "CM-04")
-group2 <- c("CM-03", "CM-22", "CM-27", "CM-35", "CM-25", "CM-51", "CM-28", "CM-52", "CM-56", "CM-05")
-group3 <- c("CM-26", "CM-49")
-
-end1 <- as.POSIXct("2025-04-22 16:15:00", tz = "Europe/Oslo")
-end2 <- as.POSIXct("2025-04-25 17:57:00", tz = "Europe/Oslo")
-end3 <- as.POSIXct("2025-04-26 11:19:00", tz = "Europe/Oslo")
-
-cm <- cm %>%
-  mutate(
-    datetime = case_when(
-      
-      Site %in% group1 &
-        datetime_tz >= as.POSIXct("2025-03-30 03:00:00", tz = "Europe/Oslo") &
-        datetime_tz <= end1 &
-        !dst_gap ~ datetime_tz + hours(1),
-      
-      Site %in% group2 &
-        datetime_tz >= as.POSIXct("2025-03-30 03:00:00", tz = "Europe/Oslo") &
-        datetime_tz <= end2 &
-        !dst_gap ~ datetime_tz + hours(1),
-      
-      Site %in% group3 &
-        datetime_tz >= as.POSIXct("2025-03-30 03:00:00", tz = "Europe/Oslo") &
-        datetime_tz <= end3 &
-        !dst_gap ~ datetime_tz + hours(1),
-      
-      TRUE ~ datetime_tz
-    )
-  )
-
-# make datetime 12 column
-
-cm <- cm %>%
-  mutate(
-    datetime_12 = datetime - hours(12)
-  )
-
-
-# clean 2025 data and upload it again, remove extra columns. 
-
-cm[1]<- NULL
-
-cm_new <- subset(cm, select = -c(dt_str, dst_gap, dt_fixed, dt_str_fixed, datetime_tz))
-write.csv(cm_new, "cm_2025.csv")
-
-
-# working with data
-
-cm <- read.csv("cm_2025.csv")
