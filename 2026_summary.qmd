@@ -1,0 +1,11 @@
+---
+title: "Overview of data collected in the field season of 2026 for coastal monitoring"
+author: "Maris Pärn"
+format:
+  html:
+    embed-resources: true
+editor: visual
+---
+
+What is the status of missing days? how are mic bad days represented?
+
