@@ -20,6 +20,7 @@ library(MetBrewer)
 #library(ggcorrplot)
 
 
+
 # read location overview data in ------------------------------------------------------------
 
 deployment <-  read_csv("data/survey_deployment.csv")
@@ -455,5 +456,7 @@ overview_summary <- read.csv("overview_2026.csv")
 
 write.csv(missing_dates, "missing_dates_2026.csv")
 
+# write cm 2026
 
+write.csv(cm, "cm_2026.csv")
 
